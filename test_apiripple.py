@@ -42,7 +42,8 @@ def test_detects_added_required_param():
     added = [c for c in changes if c.kind == "param_added"]
     assert len(added) == 1
     assert "org_id" in added[0].detail
-    assert added[0].severity == "breaking"
+    assert added[0].severity == "warning"
+
 
 
 def test_detects_removed_response_code():

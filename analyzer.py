@@ -4,12 +4,12 @@ import re
 import yaml
 from pathlib import Path
 from dataclasses import dataclass
+from severity import Severity, classify_change
 
 METHODS = {"get", "put", "post", "delete", "patch", "options", "head", "trace"}
 _VAR_RE = re.compile(r"\{[^}]+\}")
 _PH = "__RIPPLE__"
 _EXTS = {".ts", ".tsx", ".js", ".jsx", ".vue", ".py", ".go", ".rs", ".kt"}
-
 
 @dataclass
 class Change:
@@ -17,17 +17,29 @@ class Change:
     method: str
     kind: str
     detail: str
-    severity: str
+    severity: str = ""
+
+    def __post_init__(self):
+        self.severity = classify_change(self).value
+
 
 
 def load_spec(fp):
     """Load an OpenAPI spec from YAML or JSON file."""
-    text = Path(fp).read_text()
-    return json.loads(text) if fp.endswith(".json") else yaml.safe_load(text)
-
-
 def diff_specs(old, new):
     """Compare two OpenAPI spec dicts, return list of Change objects."""
+    out = []
+    op, np = old.get("paths", {}), new.get("paths", {})
+    # Detect new endpoints (info severity)
+    for path, ops in np.items():
+        if path not in op:
+            for m in ops:
+                if m in METHODS:
+                    out.append(Change(path, m, "endpoint_added",
+                                      f"{m.upper()} {path} added"))
+    for path, ops in op.items():
+        if path not in np:
+
     out = []
     op, np = old.get("paths", {}), new.get("paths", {})
     for path, ops in op.items():
