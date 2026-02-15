@@ -3,6 +3,8 @@
 import json
 import typer
 from analyzer import load_spec, diff_specs, scan_sources, score_risk, to_sarif
+from severity import Severity
+
 
 app = typer.Typer(help="🌊 APIRipple — Catch breaking API changes before they break prod.")
 
