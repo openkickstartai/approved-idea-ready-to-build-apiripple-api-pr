@@ -4,17 +4,97 @@
 
 ## 🚀 Quick Start
 
+### Installation
+
 ```bash
 pip install -r requirements.txt
+```
 
+### Basic Usage
+
+```bash
 # Diff two OpenAPI specs
 python apiripple.py diff old-spec.yaml new-spec.yaml
+
+# Diff with JSON output
+python apiripple.py diff old-spec.yaml new-spec.yaml --format json
 
 # Full analysis: diff + scan frontend code + risk score
 python apiripple.py analyze old-spec.yaml new-spec.yaml ./frontend/src
 
 # CI mode: fail if risk > 50, output SARIF for GitHub
 python apiripple.py analyze old.yaml new.yaml ./src --format sarif --threshold 50
+```
+
+### Example Output
+
+```
+🌊 APIRipple — Change Report
+==================================================
+
+  🔴 [BREAKING] DELETE /api/users/{id} removed
+  🟡 [WARNING]  PUT /api/users/{id} request body field 'email' removed
+
+  📋 2 change(s), 1 breaking
+
+  Affected files:
+    📄 src/components/UserProfile.tsx:42 → DELETE /api/users/{id}
+
+  🎯 Risk Score: 73/100
+```
+
+## ⚙️ Configuration
+
+Create a `.apiripple.yml` file in your project root to customize behavior:
+
+```yaml
+# .apiripple.yml — APIRipple project configuration
+
+# Plan: free | pro | team
+# Free: up to 20 endpoints, text/json output only
+# Pro/Team: unlimited endpoints, all output formats
+plan: free
+
+# Default output format (overridden by --format CLI flag)
+output_format: text
+
+# Endpoints to exclude from analysis
+ignored_endpoints:
+  - /health
+  - /metrics
+  - /internal/debug
+
+# Path to caller mapping file for precise impact analysis
+mapping_file: apiripple-mappings.yml
+```
+
+### Configuration Priority
+
+Settings are resolved with the following priority (highest wins):
+
+1. **CLI arguments** — `--format json` always wins
+2. **Config file** — `.apiripple.yml` values
+3. **Defaults** — `plan: free`, `output_format: text`
+
+APIRipple automatically discovers `.apiripple.yml` by walking up from the current directory.
+
+### Caller Mapping File
+
+For precise impact analysis, create a mapping file:
+
+```yaml
+# apiripple-mappings.yml
+mappings:
+  - endpoint: "GET /api/users/{id}"
+    callers:
+      - file: "src/components/UserProfile.tsx"
+        usage: "useQuery hook on line 42"
+      - file: "src/pages/Settings.tsx"
+        usage: "fetchUser() call"
+  - endpoint: "POST /api/orders"
+    callers:
+      - file: "src/components/Checkout.tsx"
+        usage: "submitOrder mutation"
 ```
 
 ## 📊 Why Teams Pay for APIRipple
@@ -35,7 +115,8 @@ python apiripple.py analyze old.yaml new.yaml ./src --format sarif --threshold 5
 | OpenAPI diff detection | ✅ | ✅ | ✅ |
 | Breaking change reports | ✅ | ✅ | ✅ |
 | Text + JSON output | ✅ | ✅ | ✅ |
-| Endpoints scanned | ≤ 25 | Unlimited | Unlimited |
+| Endpoints scanned | ≤ 20 | Unlimited | Unlimited |
+| Markdown output | — | ✅ | ✅ |
 | Frontend source scanning | — | ✅ | ✅ |
 | Risk scoring engine | — | ✅ | ✅ |
 | SARIF output for GitHub | — | ✅ | ✅ |
@@ -48,34 +129,21 @@ python apiripple.py analyze old.yaml new.yaml ./src --format sarif --threshold 5
 
 ### Who pays?
 
-**B2B engineering teams (5-200 devs)** with separate backend and frontend repos. Platform teams, API governance leads, and DevOps engineers who are tired of "surprise" breaking changes.
+**B2B engineering teams (5-200 devs)** with separate backend and frontend repos.
+Teams that have been burned by breaking API changes in production.
 
-### Why they pay?
+→ [**Upgrade to Pro**](https://apiripple.dev/pricing) for unlimited endpoints and all output formats.
 
-One production incident from a missed breaking API change costs 4-40 engineering hours ($1k-$10k+). APIRipple Pro pays for itself the first time it blocks a bad merge.
+## 🛠️ Development
 
-## ⚙️ CLI Reference
+```bash
+# Run tests
+pytest test_config.py -v
 
-```
-apiripple diff OLD NEW [--format text|json]
-apiripple analyze OLD NEW SRC_DIR [--format text|json|sarif] [--threshold 50]
-```
-
-Exit code `1` = breaking changes detected (or risk above threshold). Perfect for CI.
-
-## 🔌 GitHub Actions
-
-```yaml
-- name: APIRipple Check
-  run: |
-    pip install typer pyyaml
-    python apiripple.py analyze spec-old.yaml spec-new.yaml ./frontend/src \
-      --format sarif --threshold 40 > ripple.sarif
-- uses: github/codeql-action/upload-sarif@v3
-  with:
-    sarif_file: ripple.sarif
+# Run all tests
+pytest -v
 ```
 
-## License
+## 📄 License
 
-BSL 1.1 — Free for teams ≤ 5 devs. Commercial license required for larger teams.
+BSL 1.1 — Free for teams under 5 devs. [Contact us](https://apiripple.dev/pricing) for commercial licensing.
